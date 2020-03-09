@@ -31,10 +31,14 @@ class CustomDataset(Dataset):
 		img_name = os.path.join(self.dir_img,
                                 self.data_frame.iloc[idx, 0])
 		img = Image.open(img_name)
-		if not self.transforms:
+		if self.transforms is not None:
 			img = self.transforms(img)
 		
 		label = self.data_frame.iloc[idx, 1]
-		return (img, label)
+		output_label = []
+		for s in label:
+			if s.isdigit():
+				output_label.append(int(s))
+		return img, torch.FloatTensor(output_label)
 
 
