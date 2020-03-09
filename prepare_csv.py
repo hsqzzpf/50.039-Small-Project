@@ -96,7 +96,7 @@ def convert_oh(ls, length=20):
 import csv
 import pandas as pd
 
-def make_csv(addr):
+def make_csv(addr, split):
 
     if os.path.exists(addr):
         return
@@ -104,7 +104,7 @@ def make_csv(addr):
     out = open(addr, 'a')
     wr = csv.writer(out, dialect='excel')
 
-    _, data = _load_all_image_paths_labels("train")
+    _, data = _load_all_image_paths_labels(split)
     
     for i in range(len(data)):
         labels = []
@@ -115,10 +115,9 @@ def make_csv(addr):
 
 
 if __name__ == "__main__":
-    make_csv("./dd.csv")
+    make_csv("./train.csv", "train")
+    make_csv("./val.csv", "val")
     print("finish writing")
 
-    df = pd.read_csv("./dd.csv")
-    print(df)
 
 
