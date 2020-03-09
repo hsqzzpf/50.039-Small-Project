@@ -49,9 +49,9 @@ def evaluate(model, device, data_loader, loss_function):
 			data, target = data.to(device), target.to(device)
 			output = model(data)
 			eval_loss += loss_function(output, target).item()
-			print("output: ", output)
+			#print("output: ", output)
 			pred = torch.sigmoid(output)
-			print("pred: ", pred)
+			#print("pred: ", pred)
 			if batch_idx == 0:
 				predictions = pred
 				targets = target
