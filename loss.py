@@ -19,8 +19,8 @@ class CustomLoss1(nn.Module):
 		targets = targets.flatten()
 
 		loss = -(targets * log_sigmoid(inputs) + (1 - targets) * log_sigmoid(1-inputs))
-		print(loss)
-		return torch.sum(loss)
+		# print("l1 loss average: {}".format(torch.mean(loss)))
+		return torch.mean(loss)
 
 
 class CustomLoss2(nn.Module):
@@ -32,7 +32,8 @@ class CustomLoss2(nn.Module):
 	def forward(self, inputs, targets):
 
 		loss = -(targets * log_sigmoid(inputs) + (1 - targets) * log_sigmoid(1-inputs))
-		return torch.sum(loss)
+		# print("l2 loss average: {}".format(torch.mean(loss)))
+		return torch.mean(loss)
 
 
 class CustomLoss3(nn.Module):
@@ -45,11 +46,16 @@ class CustomLoss3(nn.Module):
 		return torch.mean((inputs - targets)**2)
 
 if __name__ == "__main__":
-	loss_fn = CustomLoss1()
+	loss_fn1 = CustomLoss1()
+	loss_fn2 = CustomLoss2()
 
-	y_true = torch.tensor([0., 0., 1., 1.])
-	y_pred = torch.tensor([0.1, 0.1, 0.9, 0.9])
+	y_true = torch.tensor([[0., 0., 1., 1.],
+							[0., 0., 1., 1.]])
 
-	print(loss_fn(y_pred, y_true))
+	y_pred = torch.tensor([[0.1, 0.1, 0.9, 0.9],
+							[0.1, 0.1, 0.9, 0.8]])
+
+	print(loss_fn1(y_pred, y_true))
+	print(loss_fn2(y_pred, y_true))
 	print(log_sigmoid(torch.tensor(0.9)))
 
