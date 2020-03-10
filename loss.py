@@ -1,10 +1,11 @@
 import torch
 import torch.nn as nn
-from torch.nn import LogSigmoid
 from sklearn.metrics import log_loss
 
+from torch.nn import BCEWithLogitsLoss
 
-log_sigmoid = LogSigmoid()
+log_sigmoid = nn.LogSigmoid()
+sigmoid = nn.Sigmoid()
 
 
 class CustomLoss1(nn.Module):
@@ -18,7 +19,8 @@ class CustomLoss1(nn.Module):
 		inputs = inputs.flatten()
 		targets = targets.flatten()
 
-		loss = -(targets * log_sigmoid(inputs) + (1 - targets) * log_sigmoid(1-inputs))
+		loss = -(targets * log_sigmoid(inputs) + \
+			(1 - targets) * torch.log(1-sigmoid(inputs)))
 		# print("l1 loss average: {}".format(torch.mean(loss)))
 		return torch.mean(loss)
 
@@ -31,7 +33,9 @@ class CustomLoss2(nn.Module):
 
 	def forward(self, inputs, targets):
 
-		loss = -(targets * log_sigmoid(inputs) + (1 - targets) * log_sigmoid(1-inputs))
+		
+		loss = -(targets * log_sigmoid(inputs) + \
+			(1 - targets) * torch.log(1-sigmoid(inputs)))
 		# print("l2 loss average: {}".format(torch.mean(loss)))
 		return torch.mean(loss)
 
@@ -49,6 +53,8 @@ if __name__ == "__main__":
 	loss_fn1 = CustomLoss1()
 	loss_fn2 = CustomLoss2()
 
+	loss_ = BCEWithLogitsLoss()
+
 	y_true = torch.tensor([[0., 0., 1., 1.],
 							[0., 0., 1., 1.]])
 
@@ -57,5 +63,5 @@ if __name__ == "__main__":
 
 	print(loss_fn1(y_pred, y_true))
 	print(loss_fn2(y_pred, y_true))
-	print(log_sigmoid(torch.tensor(0.9)))
+	print(loss_(y_pred, y_true))
 
