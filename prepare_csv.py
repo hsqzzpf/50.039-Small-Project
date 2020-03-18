@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 import torch
 
 
-directory = "../code/data/VOC2012"
+directory = "data/VOC2012"
 def get_label_dict():
     return {
             'aeroplane' :    0,

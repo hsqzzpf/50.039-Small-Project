@@ -39,6 +39,6 @@ class CustomDataset(Dataset):
 		for s in label:
 			if s.isdigit():
 				output_label.append(int(s))
-		return img, torch.FloatTensor(output_label)
+		return img, torch.FloatTensor(output_label), img_name
 
 
