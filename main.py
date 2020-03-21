@@ -118,10 +118,10 @@ def evaluate(model, device, data_loader, loss_function):
 				targets = torch.cat((targets, target))
 
 	eval_loss =sum(losses)/len(losses)
-	ap_score = average_precision_measure(predictions.reshape(-1, 20), targets.reshape(-1,20))[0]
+	ap_score, ap_ls = average_precision_measure(predictions.reshape(-1, 20), targets.reshape(-1,20))
 	
 
-	return eval_loss, ap_score
+	return eval_loss, ap_score, ap_ls
 
 
 
@@ -149,9 +149,9 @@ def train(train_loader, val_loader, model, num_epochs, batch_size_train, batch_s
 		train_loss = train_epoch(model, device, train_loader, optimizer, loss_function)
 		train_losses.append(train_loss)
 		model.train(False)
-		_, train_score = evaluate(model, device, train_loader, loss_function)
+		_, train_score, _ = evaluate(model, device, train_loader, loss_function)
 		print("Training Accuracy: {:.5f}".format(train_score))
-		eval_loss, ap_score = evaluate(model, device, val_loader, loss_function)
+		eval_loss, ap_score, _ = evaluate(model, device, val_loader, loss_function)
 		#scheduler.step()
 		print("Average Validation Loss: {:.5f}".format(eval_loss))
 		print("Validation Accuracy: {:.5f}".format(ap_score))
@@ -206,14 +206,11 @@ def run():
 	val_set = CustomDataset("val.csv", dir_img, transforms=tr)
 	val_loader = DataLoader(val_set, batch_size=batch_size_val, shuffle=False)
 
-	# model = models.resnet34(pretrained=True)
-	# model.fc = nn.Linear(512, 20)
 	device = torch.device("cuda: 1") if torch.cuda.is_available() else torch.device('cpu')
 
 	
 	criterion = CustomLoss1()
 	model = models.resnet34(pretrained=True)
-
 	model.fc = nn.Linear(512, 20)
 	
 
@@ -226,14 +223,16 @@ def run():
 	scores = [train_scores, ap_scores]
 
 
-	plot("ResNet34","loss", losses, lr, "customLoss1", num_epochs)
-	plot("ResNet34","Score", scores, lr, "customLoss1", num_epochs)
+	# plot("ResNet34","loss", losses, lr, "customLoss1", num_epochs)
+	# plot("ResNet34","Score", scores, lr, "customLoss1", num_epochs)
 	print("Display the top-50 highest scoring images and lowest scoring images for 5 random classes...")
 	model.load_state_dict(bestweights)
 	ranking(model=model, device=device, data_loader=val_loader, choice=5, top_k=50)
 	tail_accuracy(model, device, val_loader)
-	torch.save(bestweights, "weights/"+"01_"+"customLoss1"+"ResNet34")
-
+	ap_ls = evaluate(model, device, val_loader, criterion)[2]
+	print("ap for each class: ", ap_ls)
+	torch.save(bestweights, "weights/"+"01_"+"CustomLoss1"+"ResNet34")
+	
 
 
 if __name__ == "__main__":
