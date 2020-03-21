@@ -1,0 +1,9 @@
+Model,Loss Function,Learning Rate,Training Loss (best weight),"Accuracy (validation, Best weight)"
+ResNet18,CustomLoss1,0.01,0.05254,0.80012
+ResNet18,CustomLoss1,0.001,0.07542,0.77032
+ResNet18,CustomLoss2,0.01,0.01936,0.78661
+ResNet18,CustomLoss2,0.001,0.02421,0.75786
+ResNet34,CustomLoss1,0.01,0.04612,0.82588
+ResNet34,CustomLoss1,0.001,0.04749,0.81065
+ResNet34,CustomLoss2,0.01,0.01617,0.80249
+ResNet34,CustomLoss2,0.001,0.01543,0.77965

@@ -18,6 +18,7 @@ import os
 from shutil import copyfile
 import csv
 import random
+import matplotlib.pyplot as plt
 
 def get_label_dict():
     return {
@@ -43,8 +44,41 @@ def get_label_dict():
             19 : 'tvmonitor'
         }
 
+def plot(accuracies, thresholds):
+	plt.plot(thresholds, accuracies, 'b', thresholds, accuracies, 'ro')
+	plt.title("Average tailaccs over of each threshold")
+	plt.xlabel("Thresholds")
+	plt.xticks(thresholds.round(2))
+	plt.ylabel("Tailaccs")
+	plt.savefig("tailaccs")
+	plt.clf()
+	
+	
 
-def ranking(model, device, data_loader, choice, top_k):
+def get_tail_acc(pred, gt, t):
+	tp = 0
+	fp = 0 
+	for (p, g) in zip(pred, gt):
+		pred = 0
+		if p > t:
+			pred = 1
+			if pred == g:
+				tp += 1
+			else:
+				fp += 1
+	tailacc = 0
+	if fp+tp > 0:
+		tailacc = tp/(tp+fp)
+	return tailacc
+
+def class_wise_acc(total_tail):
+	accuracies = []
+	for tail in total_tail:
+		acc = sum(tail)/len(tail)
+		accuracies.append(acc)
+	return accuracies
+
+def tail_accuracy(model, device, data_loader, num_t = 15, low_t = 0.5, top_k=50):
 	model.eval()
 	img_ls = []
 	with torch.no_grad():
@@ -56,24 +90,26 @@ def ranking(model, device, data_loader, choice, top_k):
 				predictions = pred
 				targets = target
 			else:
-				predictions = torch.cat((predictions, pred))
-				target = torch.cat((targets, target))
+				predictions = torch.cat((predictions, pred),0)
+				targets = torch.cat((targets, target),0)
 			img_ls += img_name
-	#print(predictions)
 	num_img = len(img_ls)		
 
 	#print(predictions.shape)
 	num_classes = predictions.shape[1]
 	classes = list(np.arange(num_classes))
-	
-	random_choice = random.choices(classes, k=choice)
+	#print(predictions[:,0])
+	#print(len(predictions[:,0]))
 	#print(random_choice)
+	max_pred = torch.max(predictions).item()
+	print("Maximum prediction: ", max_pred)
+	thresholds = np.linspace(low_t, max_pred, num_t, endpoint=False)
 	class_pred = {}
 	img_pred = []
-	for c in random_choice:
+	for c in classes:
 		tmp = []
 		for i in range(num_img):
-			tmp.append(predictions[i][c].item())
+			tmp.append((predictions[i][c].item(), targets[i][c].item()))
 		class_pred[c] = tmp
 		img_tmp = {}
 		for j in range(num_img):
@@ -82,63 +118,43 @@ def ranking(model, device, data_loader, choice, top_k):
 		img_pred.append(img_tmp)
 	#print(len(random_choice))
 	labels_dict = get_label_dict()
-	class_count = 0
-	for dic in img_pred:
-		
-		curr_class = labels_dict[random_choice[class_count]]
-		#print(curr_class)
-		top_img = []
-		bottom_img = []
-		values_ls = list(dic.values())
-		values_ls.sort()
-		top_value = values_ls[len(dic)-top_k:]
-		bottom_value = values_ls[:top_k]
-		#print(len(top_value), len(low_value))
-		top_value.reverse()
-		for i in range(len(top_value)):
-			for key in dic:
-				if dic[key] == top_value[i]:
-					top_img.append(key)
+	total_tail = []
+	for t in thresholds:
+		tail = []
+		class_count = 0
+		for dic in img_pred:
+			curr_class = labels_dict[class_count]
+			top_img = []
+			bottom_img = []
+			values_ls = []
+			for tup in dic.values():
+				values_ls.append(tup[0])
+			values_ls.sort()
+			top_value = values_ls[len(dic)-top_k:]
+			top_value.reverse()
+			for i in range(len(top_value)):
+				for key in dic:
+					if dic[key][0] == top_value[i]:
+						top_img.append(key)
 
-		for j in range(len(bottom_value)):
-			for key in dic:
-				if dic[key] == bottom_value[j]:
-					bottom_img.append(key)
-		
-		
-		if not os.path.exists('class_'+curr_class):
-			os.makedirs('class_'+curr_class)
-			
-		if not os.path.exists('class_'+curr_class+'/'+"top"):
-			os.makedirs('class_'+curr_class+'/'+"top")
-		
-		if not os.path.exists('class_'+curr_class+'/'+"bottom"):
-			os.makedirs('class_'+curr_class+'/'+"bottom")
-		
-		
-		out = open('class_'+curr_class+'/'+"top/images_name.csv", 'a')
-		wr = csv.writer(out, dialect='excel')
-		for i in range(len(top_img)):
-			name = top_img[i].split('/')[-1]
-			#print(name)
-			copyfile(top_img[i], 'class_'+curr_class+'/'+"top/"+name)
-			wr.writerow([top_img[i], i+1])
-			os.rename('class_'+curr_class+'/'+"top/"+name, 'class_'+curr_class+'/'+"top/"+str(i+1)+"_"+name)
-		out.close()
+			pred = []
+			gt = []
 
-		outb = open('class_'+curr_class+'/'+"bottom/images_name.csv", 'a')
-		wrb = csv.writer(outb, dialect='excel')
-		for i in range(len(bottom_img)):
-			name = bottom_img[i].split('/')[-1]
-			copyfile(bottom_img[i], 'class_'+curr_class+'/'+"bottom/"+name)
-			wrb.writerow([bottom_img[i], i+1])
-			os.rename('class_'+curr_class+'/'+"bottom/"+name, 'class_'+curr_class+'/'+"bottom/"+str(i+1)+"_"+name)
-		outb.close()
-		class_count += 1
+			for i in range(len(top_img)):
+				image = dic[top_img[i]]
+				pred.append(image[0])
+				gt.append(image[1])
+
+			tailacc = get_tail_acc(pred, gt, t)
+			print("Tail Accuracy for threshold {} of class {}: {}".format(t, curr_class, tailacc))
+			class_count += 1	
+			tail.append(tailacc)
+		total_tail.append(tail)
+	accuracies = class_wise_acc(total_tail)
+	plot(accuracies, thresholds)
 	print("Done")
+
 		
-
-
 
 if __name__ == "__main__":
 	tr = transforms.Compose([transforms.CenterCrop(224),
@@ -152,4 +168,4 @@ if __name__ == "__main__":
 	val_set = CustomDataset("val.csv", "", transforms=tr)
 	val_loader = DataLoader(val_set, batch_size=32, shuffle=False)
 	
-	ranking(model, device, val_loader, 5, 50)
+	tail_accuracy(model, device, val_loader, num_t = 15)
